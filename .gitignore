@@ -1,0 +1,15 @@
+#virtual env
+crypto_venv/
+.env
+
+#python bytecode and cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+#IDE files
+.vscode/
+.idea/
