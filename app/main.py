@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from app.services.coingecko import ping_coingecko
 
 #initialize fastAPI application
 app = FastAPI(
@@ -19,12 +20,10 @@ async def health_check():
     """
     check health status of application and external services 
     """
-    #make external service dynamic after connecting to the CoinGecko API
+    external_status = await ping_coingecko()
+
     return{
         "app_status":"healthy",
         "app_version":"1.0.0",
-        "external_service":{
-            "status":"reachable",
-            "version":"v3" 
-        }
+        "external_service": external_status
     }
