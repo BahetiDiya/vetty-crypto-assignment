@@ -1,5 +1,14 @@
-from fastapi import FastAPI, Query, HTTPException
+from fastapi import FastAPI, Query, HTTPException, BackgroundTasks
+from pydantic import BaseModel, HttpUrl
+import httpx
 from app.services.coingecko import ping_coingecko, get_all_coins, get_all_categories,get_market_data
+
+webhooks_db = []
+
+class WebhookRequest(BaseModel):
+    url: HttpUrl
+    coin_id: str
+    target_price: float
 
 #initialize fastAPI application
 app = FastAPI(
@@ -101,3 +110,51 @@ async def market_data(
         "per_page": per_page,
         "data": data
     }
+
+async def send_webhook_notification(url: str, payload: dict):
+    """
+    Background task that sends HTTP post request to the user's URL
+    """
+
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(url, json=payload, timeout=5.0)
+            print(f"Webhook fired to {url} with status {response.status_code}")
+
+        except httpx.RequestError as exc:
+            print(f"Webhook failed to reach {url}: {exc}")
+
+@app.post("/webhooks/register", tags=["Webhooks"])
+async def register_webhook (webhook: WebhookRequest):
+    """
+    Register webhook URL to get notified when a coin gits a specific price
+    """
+
+    webhooks_db.append({
+        "url": str(webhook.url),
+        "coin_id": webhook.coin_id,
+        "target_price":webhook.target_price
+    })
+    return {
+        "message": "Webhook registered successfully", "total_webhooks":len(webhooks_db)
+    }
+
+@app.post("/webhooks/trigger", tags=["Webhooks"])
+async def simulate_webhook_trigger(background_tasks: BackgroundTasks):
+    """
+    Simulate checking prices and triggering background webhooks for testing.
+    """
+    if not webhooks_db:
+        return {"message": "No webhooks registered yet."}
+
+    # Simulate logic: pretend all registered coins just hit their target prices
+    for wh in webhooks_db:
+        payload = {
+            "coin_id": wh["coin_id"],
+            "alert": "Target price reached!",
+            "price": wh["target_price"]
+        }
+        # Add to background tasks (server responds to user instantly, sends webhook in background)
+        background_tasks.add_task(send_webhook_notification, wh["url"], payload)
+        
+    return {"message": "Background webhooks triggered successfully!"}
