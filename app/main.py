@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Query
-from app.services.coingecko import ping_coingecko, get_all_coins 
+from app.services.coingecko import ping_coingecko, get_all_coins, get_all_categories
 
 #initialize fastAPI application
 app = FastAPI(
@@ -48,5 +48,26 @@ async def list_coins(
         "per_page": per_page,
         "total_coins": len(all_coins),
         "data": paginated_coins
+    }
+
+@app.get("/categories", tags=["Crypto"])
+async def list_categories(
+    page_num: int = Query(1, ge=1, description="Page number for pagination"),
+    per_page: int = Query(10, ge=1, description="Number of items per page")
+):
+    """
+    List all available cryptocurrency categories with pagination.
+    """
+    all_categories = await get_all_categories()
+
+    start_index = (page_num - 1) * per_page
+    end_index = start_index + per_page
+    paginated_categories = all_categories[start_index:end_index]
+
+    return {
+        "page_num": page_num,
+        "per_page": per_page,
+        "total_categories": len(all_categories),
+        "data": paginated_categories
     }
 

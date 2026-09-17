@@ -28,7 +28,7 @@ async def get_all_coins()-> dict:
 
     async with httpx.AsyncClient() as client:
         try:
-            # Fetching all coins from CoinGecko
+            #fetching all coins from CoinGecko
             response = await client.get(f"{COINGECKO_BASE_URL}/coins/list", timeout=10.0)
             response.raise_for_status()
             return response.json()
@@ -36,4 +36,22 @@ async def get_all_coins()-> dict:
         except httpx.RequestError as exc:
             logger.error(f"Error fetching coins {exc}")
             return []
+
+async def get_all_categories()->dict:
+    """
+    Fetches the list of all the cryptocurrency categories available
+    """
+
+    async with httpx.AsyncClient() as client:
+        try:
+            #fetching categories from CoinGecko
+            response = await client.get(f"{COINGECKO_BASE_URL}/coins/categories/list", timeout=10.0)
+            response.raise_for_status()
+            return response.json()
+
+        except httpx.RequestError as exc:
+            logger.error(f"Error fetching categories {exc}")
+            return[]
+        
+
         
