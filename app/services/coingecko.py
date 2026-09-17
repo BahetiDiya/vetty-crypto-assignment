@@ -1,5 +1,6 @@
 import httpx
 import logging
+from cachetools import TTLCache
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -21,37 +22,52 @@ async def ping_coingecko()->dict:
             logger.error(f"Failed to reach Coingecko {exc}")
             return {"status":"unreachable", "version":"unknown"}
 
+coins_cache = TTLCache(maxsize=100, ttl=300)
+categories_cache = TTLCache(maxsize=100, ttl=300)
 async def get_all_coins()-> dict:
     """
     Fetches the list of all supported coins from CoinGecko
     """
+    if "list" in coins_cache:
+        logger.info("Serving coins from cache")
+        return coins_cache["list"]
 
+    logger.info("Fetching coins from CoinGecko API")
     async with httpx.AsyncClient() as client:
         try:
-            #fetching all coins from CoinGecko
             response = await client.get(f"{COINGECKO_BASE_URL}/coins/list", timeout=10.0)
             response.raise_for_status()
-            return response.json()
-
+            data = response.json()
+            
+            # 3. Save to cache for next time
+            coins_cache["list"] = data
+            return data
+            
         except httpx.RequestError as exc:
-            logger.error(f"Error fetching coins {exc}")
+            logger.error(f"Error fetching coins: {exc}")
             return []
 
 async def get_all_categories()->dict:
     """
     Fetches the list of all the cryptocurrency categories available
     """
-
+    if "list" in categories_cache:
+        logger.info("Serving categories from cache")
+        return categories_cache["list"]
+            
+    logger.info("Fetching categories from CoinGecko API")
     async with httpx.AsyncClient() as client:
         try:
-            #fetching categories from CoinGecko
             response = await client.get(f"{COINGECKO_BASE_URL}/coins/categories/list", timeout=10.0)
             response.raise_for_status()
-            return response.json()
-
+            data = response.json()
+            
+            categories_cache["list"] = data
+            return data
+            
         except httpx.RequestError as exc:
-            logger.error(f"Error fetching categories {exc}")
-            return[]
+            logger.error(f"Error fetching categories: {exc}")
+            return []
         
 
 async def get_market_data(
