@@ -1,5 +1,5 @@
-from fastapi import FastAPI, Query
-from app.services.coingecko import ping_coingecko, get_all_coins, get_all_categories
+from fastapi import FastAPI, Query, HTTPException
+from app.services.coingecko import ping_coingecko, get_all_coins, get_all_categories,get_market_data
 
 #initialize fastAPI application
 app = FastAPI(
@@ -71,3 +71,33 @@ async def list_categories(
         "data": paginated_categories
     }
 
+@app.get("/market-data", tags=["Crypto"])
+async def market_data(
+    coin_id: str | None = Query(None, description="Filter by Coin ID (e.g., bitcoin)"),
+    category: str | None = Query(None, description="Filter by Category (e.g., smart-contract-platform)"),
+    page_num: int = Query(1, ge=1, description="Page number for pagination"),
+    per_page: int = Query(10, ge=1, description="Number of items per page")
+):
+    """
+    Retrieve cryptocurrency market information in CAD.
+    Requires at least one of: coin_id or category.
+    """
+    #validation at least one parameter must be provided
+    if not coin_id and not category:
+        raise HTTPException(
+            status_code=400, 
+            detail="At least one parameter (coin_id or category) must be provided."
+        )
+
+    data = await get_market_data(
+        coin_id=coin_id, 
+        category=category, 
+        page=page_num, 
+        per_page=per_page
+    )
+    
+    return {
+        "page_num": page_num,
+        "per_page": per_page,
+        "data": data
+    }

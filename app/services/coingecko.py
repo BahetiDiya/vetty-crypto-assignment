@@ -54,4 +54,36 @@ async def get_all_categories()->dict:
             return[]
         
 
-        
+async def get_market_data(
+        coin_id: str | None = None,
+        category: str | None = None,
+        page : int = 1,
+        per_page : int = 10
+)-> list:
+    """
+    Fetches cryptocurrency data in CAD
+    """
+    async with httpx.AsyncClient() as client:
+
+        params ={
+            "vs_currency": "cad",
+            "per_page" : per_page,
+            "page": page
+        }
+        if coin_id:
+            params["ids"] = coin_id
+        if category:
+            params["category"] = category
+
+        try:
+            response = await client.get(
+                    f"{COINGECKO_BASE_URL}/coins/markets", 
+                    params=params, 
+                    timeout=10.0
+                )
+            response.raise_for_status()
+            return response.json()
+
+        except httpx.RequestError as exc:
+                logger.error(f"Error fetching market data: {exc}")
+                return []
